@@ -1,0 +1,34 @@
+---
+- hosts: web-servers
+  vars:
+    fusioninventory_server: http://fusioninventory.home.local
+    epel_repo_link: http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+  tasks:
+        - name: Install wget
+          yum: name=wget state=present
+
+        - name: get epel-repo
+          shell: wget {{ epel_repo_link }} -O /tmp/epel.rpm
+
+        - name: install epel repo
+          yum:
+            name: /tmp/epel.rpm
+            state: present
+
+        - name: install fusioninventory agent
+          yum: name=fusioninventory-agent state=present
+
+        - name: install fusioninventory agent task
+          yum: name=fusioninventory-agent-task-inventory state=present
+
+        - name: edit agent.cfg
+          lineinfile:
+            path: /etc/fusioninventory/agent.cfg
+            regexp: '^server = http://server.domain.com/glpi/plugins/fusioninventory/'
+            insertafter: '^#server = http://server.domain.com/glpi/plugins/fusioninventory/'
+            line: 'server = {{ fusioninventory_server }}/glpi/plugins/fusioninventory/'
+          notify: force inventory
+
+  handlers:          
+        - name: force inventory
+          shell: fusioninventory-agent
